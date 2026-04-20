@@ -14,12 +14,12 @@
 /* simulator interface */
 
 extern int clocktime;
-extern void tolayer2(struct rtpkt);
 extern struct rtpkt {
     int sourceid;
     int destid; 
     int mincost[4];
 };
+extern void tolayer2(struct rtpkt);
 
 #define NumNodes 4
 #define INF 9999
@@ -68,8 +68,8 @@ static int mincosts(int out[NumNodes], const int prev[NumNodes]) {
         int best = INF;
         for (int v = 0; v < NumNodes; v++)
             if (dt0.costs[d][v] < best) best = dt0.costs[d][v];
-            out[d] = best;
-            if (prev && best != prev[d]) changed = 1;
+        out[d] = best;
+        if (prev && best != prev[d]) changed = 1;
     }
     return changed;
 }
