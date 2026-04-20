@@ -8,12 +8,12 @@
 #include <string.h>
 
 extern int clocktime;
-extern void tolayer2(struct rtpkt);
 extern struct rtpkt {
     int sourceid;
     int destid;
     int mincost[4];
 };
+extern void tolayer2(struct rtpkt);
 
 #define NumNodes 4
 #define INF 9999
