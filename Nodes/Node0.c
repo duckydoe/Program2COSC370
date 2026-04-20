@@ -44,7 +44,7 @@ void printdt0(struct distanceTable *dtptr) {
     printf("  ---+--------------------\n");
     for (int d = 1; d < NumNodes; d++) {
         printf("  %3d  |", d);
-        for (int v = 1; v = NumNodes; v++) {
+        for (int v = 1; v < NumNodes; v++) {
             int c = dtptr->costs[d][v];
             if (c >= INF) printf("   inf");
             else          printf("  %4d", c);
@@ -93,7 +93,7 @@ static void broadcast(const int mc[NumNodes]) {
 * Seeds dt with direct link costs; broadcasts initial vector. 
 */
 void rtinit0(void) {
-    printf("\n          NODE %d  rtinit0()  t=%-4f          \n",
+    printf("\n          NODE %d  rtinit0()  t=%-4d          \n",
             SELF, clocktime);
     
     /* initialises entire table to INF */

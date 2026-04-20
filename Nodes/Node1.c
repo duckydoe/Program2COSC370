@@ -62,7 +62,7 @@ static void broadcast(const int mc[NumNodes]) {
     struct rtpkt pkt;
     pkt.sourceid = SELF;
     memcpy(pkt.mincost, mc, NumNodes * sizeof(int));
-    for (int i = 0; i < NumNodes; i++) {
+    for (int i = 0; i < NumNeighbors; i++) {
         pkt.destid = NEIGHBORS[i];
         printf("  [NODE %d -> NODE %d]  sending [%d %d %d %d]\n",
             SELF, pkt.destid, mc[0], mc[1], mc[2], mc[3]);
@@ -92,10 +92,11 @@ void rtinit1(void) {
 void rtupdate1(struct rtpkt *rcvdpkt) {
     int from = rcvdpkt->sourceid;
 
-    printf("          NODE %d   rtupdate1()   t=%-4d          \n",
-        SELF, clocktime, from,
-    rcvdpkt->mincost[0], rcvdpkt->mincost[1],
-    rcvdpkt->mincost[2], rcvdpkt->mincost[3]);
+    printf("          NODE %d   rtupdate1()   t=%-4d\n"
+       "  packet from node %d  ->  [%d %d %d %d]\n",
+       SELF, clocktime, from,
+       rcvdpkt->mincost[0], rcvdpkt->mincost[1],
+       rcvdpkt->mincost[2], rcvdpkt->mincost[3]);
 
     if (lc[from] >= INF || from == SELF) {
         printf("  DROP - node %d if not a direct neighbor of node %d.\n",
