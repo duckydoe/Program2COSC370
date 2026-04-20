@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-extern int clocktime;
+extern float clocktime;
 extern struct rtpkt {
     int sourceid;
     int destid;
