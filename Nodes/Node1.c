@@ -1,10 +1,10 @@
 /*
-* Node0 - Distance Vector Routing
+* Node1 - Distance Vector Routing
 *
-* Direct link costs from node 0:
+* Direct link costs from node 1:
 *   to node 0 : 1
 *   to node 2 : 1
-*
+*    NOT connected to node 3
 *   Distance table layout:
 *       dt1.costs[dest][via] = cost to reach dest using
 *                            direct neighbor via as first hop
