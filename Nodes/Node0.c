@@ -13,7 +13,7 @@
 
 /* simulator interface */
 
-extern int clocktime;
+extern float clocktime;
 extern struct rtpkt {
     int sourceid;
     int destid; 
@@ -94,7 +94,7 @@ static void broadcast(const int mc[NumNodes]) {
 */
 void rtinit0(void) {
     printf("\n          NODE %d  rtinit0()  t=%-4d          \n",
-            SELF, clocktime);
+            SELF, );
     
     /* initialises entire table to INF */
     for (int d = 0; d < NumNodes; d++) 
