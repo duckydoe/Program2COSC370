@@ -30,23 +30,24 @@ extern void tolayer2(struct rtpkt);
 
 #define INF 9999
 
-static int lc[4] = { 1, 0, 1, INF };
-
-int connectcosts1[4] = { 1, 0, 1, 999 };
+static int lc[4] = { 3, 1, 0, 2 };
 
 struct distance_table {
     int costs[4][4];
-} dt1;
+} dt2;
 
-printdt0(dtptr)
-     struct distance_table *dtptr;
+printdt2(dtptr)
+  struct distance_table *dtptr;
 {
-  printf("             via   \n");
-  printf("   D1 |    0     2 \n");
-  printf("  ----|-----------\n");
-  printf("     0|  %3d   %3d\n", dtptr->costs[0][0], dtptr->costs[0][2]);
-  printf("dest 2|  %3d   %3d\n", dtptr->costs[2][0], dtptr->costs[2][2]);
-  printf("     3|  %3d   %3d\n", dtptr->costs[3][0], dtptr->costs[3][2]);
+  printf("                via     \n");
+  printf("   D2 |    0     1    3 \n");
+  printf("  ----|-----------------\n");
+  printf("     0|  %3d   %3d   %3d\n",
+         dtptr->costs[0][0], dtptr->costs[0][1], dtptr->costs[0][3]);
+  printf("dest 1|  %3d   %3d   %3d\n",
+         dtptr->costs[1][0], dtptr->costs[1][1], dtptr->costs[1][3]);
+  printf("     3|  %3d   %3d   %3d\n",
+         dtptr->costs[3][0], dtptr->costs[3][1], dtptr->costs[3][3]);
 }
  
 
@@ -57,54 +58,60 @@ static void getmincosts(int out [4])
     for (d = 0; d < 4; d++) {
         out[d] = INF;
         for (v = 0; v < 4; v++) {
-            if (dt1.costs[d][v] < out[d])
-                out[d] = dt1.costs[d][v];
+            if (dt2.costs[d][v] < out[d])
+                out[d] = dt2.costs[d][v];
         }
     }
 }
 
-rtinit1()
+void rtinit2()
     {
         int d, v;
         int mc[4];
         struct rtpkt pkt;
 
-        printf("\nrtinit1() called at t=%.3f\n", clocktime);
+        printf("\nrtinit2() called at t=%.3f\n", clocktime);
 
         //Initialise entire table to INF
         for (d = 0; d < 4; d++)
             for (v = 0; v < 4; v++)
-                dt1.costs[d][v] = INF;
+                dt2.costs[d][v] = INF;
         
         //Seed direct link costs on the diagonal 
         
-        dt1.costs[1][1] = 0;
-        dt1.costs[0][0] = 1;
-        dt1.costs[2][2] = 1;
+        dt2.costs[2][2] = 0;
+        dt2.costs[0][0] = 3;
+        dt2.costs[1][1] = 1;
+        dt2.costs[3][3] = 2;
 
-        printdt1(&dt1);
+        printdt2(&dt2);
 
         //compute initial min-cost vector
         getmincosts(mc);
 
         //send to all direct neighbors
-        pkt.sourceid = 1;
+        pkt.sourceid = 2;
         memcpy(pkt.mincost, mc, 4 * sizeof(int));
 
         pkt.destid = 0;
-        printf("rtinit1: sending to node 0: [%d %d %d %d]\n",
+        printf("rtinit2: sending to node 0: [%d %d %d %d]\n",
                 mc[0], mc[1], mc[2], mc[3]);
         tolayer2(pkt);
 
-        pkt.destid = 2;
-        printf("rinit1: sending to node 2: [%d %d %d %d]\n",
+        pkt.destid = 1;
+        printf("rinit2: sending to node 1: [%d %d %d %d]\n",
+                mc[0], mc[1], mc[2],mc[3]);
+        tolayer2(pkt);
+
+        pkt.destid = 3;
+        printf("rinit2: sending to node 3: [%d %d %d %d]\n",
                 mc[0], mc[1], mc[2],mc[3]);
         tolayer2(pkt);
 
     
     }
 
-    rtupdate1(rcvdpkt)
+    void rtupdate2(rcvdpkt)
         struct rtpkt *rcvdpkt;
         {
             int from = rcvdpkt->sourceid;
@@ -118,8 +125,8 @@ rtinit1()
                     rcvdpkt->mincost[2], rcvdpkt->mincost[3]);
 
             //Reject packets from non-neighbors
-            if (from < 0 || from > 3 || lc[from] >= INF || from == 1) {
-                printf("rtupdate1: DROP - node %d not a direct neighbor\n", from);
+            if (from < 0 || from > 3 || lc[from] >= INF || from == 2) {
+                printf("rtupdate2: DROP - node %d not a direct neighbor\n", from);
                 return;
             }
 
@@ -131,40 +138,34 @@ rtinit1()
                 int candidate;
                 if (rcvdpkt->mincost[d] >= INF) continue;
                 candidate = lc[from] + rcvdpkt->mincost[d];
-                if (candidate < dt1.costs[d][from]) {
-                    dt1.costs[d][from] = candidate;
+                if (candidate < dt2.costs[d][from]) {
+                    dt2.costs[d][from] = candidate;
                     changed = 1;
                 }
             }
 
             if (changed) {
-                printf("rtupdate0: table updated\n");
-                printdt1(&dt1);
+                printf("rtupdate2: table updated\n");
+                printdt2(&dt2);
 
                 //recompute mins; bnoradcast if min changed
                 getmincosts(mc);
                 if (mc[0] != prev[0] || mc[1] != prev[1] ||
                     mc[2] != prev[2] || mc[3] != prev[3]){
 
-                        printf("rtupdate1: min-costs changed, broadcasting [%d %d %d %d]\n",
+                        printf("rtupdate2: min-costs changed, broadcasting [%d %d %d %d]\n",
                                 mc[0], mc[1], mc[2], mc[3]);
-                        pkt.sourceid = 0;
+                        pkt.sourceid = 2;
                         memcpy(pkt.mincost, mc, 4 * sizeof(int));
 
+                        pkt.destid = 0; tolayer2(pkt);
                         pkt.destid = 1; tolayer2(pkt);
-                        pkt.destid = 2; tolayer2(pkt);
                         pkt.destid = 3; tolayer2(pkt);
                     } else {
-                        printf("rupdate1: table changed but min-costs same, no broadcast\n");
+                        printf("rupdate2: table changed but min-costs same, no broadcast\n");
                     }
             }else {
-                printf("rupdate1: table unchanged\n");
-                printdt1(&dt1);
+                printf("rupdat2: table unchanged\n");
+                printdt2(&dt2);
             }
         }
-
-        linkhandler0(linkid, newcost)
-            int linkid, newcost;
-
-            {
-}
