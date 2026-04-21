@@ -1,134 +1,160 @@
 /*
-* Node3,c - Distance Vector Routing
-* Direct links: 3-0: 7 3-2: 2 (Not Connected to 1)
+* Node3 - Distance Vector Routing
+*
+* Direct link costs from node 3:
+*   to node 0 : 7
+*   to node 2 : 2
+*   NOT connected to node 1 
+*
+*   Distance table layout:
+*       dt3.costs[dest][via] = cost to reach dest using
+*                            direct neighbor via as first hop
 */
 
 #include <stdio.h>
 #include <string.h>
 
-extern float clocktime; 
 extern struct rtpkt {
     int sourceid;
-    int destid; 
+    int destid;
     int mincost[4];
 };
+
+extern int TRACE;
+extern int YES;
+extern int NO;
+extern float clocktime;
+
 extern void tolayer2(struct rtpkt);
 
-#define NumNodes 4
 #define INF 9999
-#define SELF 3
 
-static const int lc[NumNodes] = { 7, INF, 2, 0 };
-/* node 3 -> 1 = INF */
+static int lc[4] = { 7, INF, 2, 0 };
 
-static const int NEIGHBORS[] = { 0, 2 };
-#define NumNeighbors 2
+struct distance_table {
+    int costs[4][4];
+} dt3;
 
-struct distanceTable { int costs[NumNodes][NumNodes]; };
-static struct distanceTable dt3;
+printdt3(dtptr)
+  struct distance_table *dtptr;
+{
+  printf("             via     \n");
+  printf("   D3 |    0     2 \n");
+  printf("  ----|-----------\n");
+  printf("     0|  %3d   %3d\n", dtptr->costs[0][0], dtptr->costs[0][2]);
+  printf("dest 1|  %3d   %3d\n", dtptr->costs[1][0], dtptr->costs[1][2]);
+  printf("     2|  %3d   %3d\n", dtptr->costs[2][0], dtptr->costs[2][2]);
+}
+ 
 
-void printdt3(struct distanceTable *dtptr) {
-    printf("                via\n");
-    printf("  D3  |    0      2\n");
-    printf(" -----+-----------\n");
-    for (int d = 0; d <NumNodes; d++) {
-        if (d == SELF) continue;
-        printf("  %3d |", d);
-        for (int v = 0; v < NumNodes; v++) {
-            if (v == SELF || lc[v] >= INF) continue;
-            int c = dtptr->costs[d][v];
-            if (c >= INF) printf("  inf");
-            else          printf("  %4d", c);
+//Helper: compute min cost to each deset accross all via-columns
+static void getmincosts(int out [4])
+{
+    int d, v; 
+    for (d = 0; d < 4; d++) {
+        out[d] = INF;
+        for (v = 0; v < 4; v++) {
+            if (dt3.costs[d][v] < out[d])
+                out[d] = dt3.costs[d][v];
         }
-        printf("\n");
     }
-    printf("\n");
 }
 
-static int mincosts(int out[NumNodes], const int prev[NumNodes]) {
-    int changed = 0;
-    for (int d = 0; d < NumNodes; d++) {
-        int best = INF;
-        for (int v = 0; v < NumNodes; v++) 
-            if (dt3.costs[d][v] < best) best = dt3.costs[d][v];
-        out[d] = best;
-        if (prev && best != prev[d]) changed = 1;
-    }
-    return changed;
-}
+void rtinit3()
+    {
+        int d, v;
+        int mc[4];
+        struct rtpkt pkt;
 
-static void broadcast(const int mc[NumNodes]) {
-    struct rtpkt pkt;
-    pkt.sourceid = SELF;
-    memcpy(pkt.mincost, mc, NumNodes * sizeof(int));
-    for (int i = 0; i < NumNeighbors; i++) {
-        pkt.destid = NEIGHBORS[i];
-        printf("  [NODE %d -> NODE %d]  sending [%d %d %d %d]\n",
-            SELF, pkt.destid, mc[0], mc[1], mc[2], mc[3]);
+        printf("\nrtinit3() called at t=%.3f\n", clocktime);
+
+        //Initialise entire table to INF
+        for (d = 0; d < 4; d++)
+            for (v = 0; v < 4; v++)
+                dt3.costs[d][v] = INF;
+        
+        //Seed direct link costs on the diagonal 
+        
+        dt3.costs[3][3] = 0;
+        dt3.costs[0][0] = 7;
+        dt3.costs[2][2] = 2;
+
+        printdt3(&dt3);
+
+        //compute initial min-cost vector
+        getmincosts(mc);
+
+        //send to all direct neighbors
+        pkt.sourceid = 3;
+        memcpy(pkt.mincost, mc, 4 * sizeof(int));
+
+        pkt.destid = 0;
+        printf("rtinit3: sending to node 0: [%d %d %d %d]\n",
+                mc[0], mc[1], mc[2], mc[3]);
         tolayer2(pkt);
-    }
-}
 
-/* rtinit3 */
-void rtinit3(void) {
-    printf("\n           NODE %d  rtinit3()  t=%-4d          \n",
-        SELF, clocktime);
-    for (int d = 0; d < NumNodes; d++)
-        for (int v = 0; v < NumNodes; v++)
-            dt3.costs[d][v] = INF;
-    for (int v = 0; v < NumNodes; v++)
-        if (lc[v] < INF)
-            dt3.costs[v][v] = lc[v];
+        pkt.destid = 2;
+        printf("rinit3: sending to node 2: [%d %d %d %d]\n",
+                mc[0], mc[1], mc[2],mc[3]);
+        tolayer2(pkt);
+
     
-    printdt3(&dt3);
-
-    int mc[NumNodes];
-    mincosts(mc, NULL);
-    broadcast(mc);
-}
-
-/* rtupdate3 */
-void rtupdate3(struct rtpkt *rcvdpkt) {
-    int from = rcvdpkt->sourceid;
-
-    printf("          NODE %d   rtupdate3()   t=%-4d\n"
-       "  packet from node %d  ->  [%d %d %d %d]\n",
-        SELF, clocktime, from,
-        rcvdpkt->mincost[0], rcvdpkt->mincost[1],
-        rcvdpkt->mincost[2], rcvdpkt->mincost[3]);
-
-    if (lc[from] >= INF || from == SELF) {
-        printf("  DROP - node %d if not a direct neighbor of node %d.\n",
-            from,SELF);
-        return;
     }
 
-    int prev[NumNodes];
-    mincosts(prev, NULL);
+    void rtupdate3(rcvdpkt)
+        struct rtpkt *rcvdpkt;
+        {
+            int from = rcvdpkt->sourceid;
+            int d, changed;
+            int prev[4], mc[4];
+            struct rtpkt pkt; 
 
-    int tableChanged = 0;
-    for (int d = 0; d < NumNodes; d++) {
-        if (rcvdpkt->mincost[d] >= INF) continue;
-        int candidate = lc[from] + rcvdpkt->mincost[d];
+            printf("\nrtupdate3() called at t=%.3f, pkt from node %d [%d %d %d %d]\n",
+                    clocktime, from ,
+                    rcvdpkt->mincost[0], rcvdpkt->mincost[1],
+                    rcvdpkt->mincost[2], rcvdpkt->mincost[3]);
 
-        if (candidate < dt3. costs[d][from]) {
-            dt3.costs[d][from] = candidate;
-            tableChanged = 1;
+            //Reject packets from non-neighbors
+            if (from < 0 || from > 3 || lc[from] >= INF || from == 3) {
+                printf("rtupdate3: DROP - node %d not a direct neighbor\n", from);
+                return;
+            }
+
+            getmincosts(prev);
+
+            //Bellman-For relaxation
+            changed = 0;
+            for (d = 0; d < 4; d++){
+                int candidate;
+                if (rcvdpkt->mincost[d] >= INF) continue;
+                candidate = lc[from] + rcvdpkt->mincost[d];
+                if (candidate < dt3.costs[d][from]) {
+                    dt3.costs[d][from] = candidate;
+                    changed = 1;
+                }
+            }
+
+            if (changed) {
+                printf("rtupdate3: table updated\n");
+                printdt3(&dt3);
+
+                //recompute mins; bnoradcast if min changed
+                getmincosts(mc);
+                if (mc[0] != prev[0] || mc[1] != prev[1] ||
+                    mc[2] != prev[2] || mc[3] != prev[3]){
+
+                        printf("rtupdate3: min-costs changed, broadcasting [%d %d %d %d]\n",
+                                mc[0], mc[1], mc[2], mc[3]);
+                        pkt.sourceid = 2;
+                        memcpy(pkt.mincost, mc, 4 * sizeof(int));
+
+                        pkt.destid = 0; tolayer2(pkt);
+                        pkt.destid = 2; tolayer2(pkt);
+                    } else {
+                        printf("rupdate3: table changed but min-costs same, no broadcast\n");
+                    }
+            }else {
+                printf("rupdat2: table unchanged\n");
+                printdt3(&dt3);
+            }
         }
-    }
-
-    if (tableChanged) {
-        printf("  Table UPDATED:\n");
-        printdt3(&dt3);
-        int mc[NumNodes];
-        if (mincosts(mc, prev)) {
-            printf("  Min-costs changed -> broadcasting to neighbors.\n");
-            broadcast(mc);
-        } else {
-            printf("  Table changed but min-costs unchanged -> no broadcast.\n");
-        }
-    } else {
-        printf("  Table unchanged.\n");
-        printdt3(&dt3);
-    }
-}
