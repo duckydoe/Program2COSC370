@@ -119,7 +119,7 @@ void rtinit2()
             int prev[4], mc[4];
             struct rtpkt pkt; 
 
-            printf("\nrtupdate1() called at t=%.3f, pkt from node %d [%d %d %d %d]\n",
+            printf("\nrtupdate2() called at t=%.3f, pkt from node %d [%d %d %d %d]\n",
                     clocktime, from ,
                     rcvdpkt->mincost[0], rcvdpkt->mincost[1],
                     rcvdpkt->mincost[2], rcvdpkt->mincost[3]);
