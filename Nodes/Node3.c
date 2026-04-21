@@ -145,7 +145,7 @@ void rtinit3()
 
                         printf("rtupdate3: min-costs changed, broadcasting [%d %d %d %d]\n",
                                 mc[0], mc[1], mc[2], mc[3]);
-                        pkt.sourceid = 2;
+                        pkt.sourceid = 3;
                         memcpy(pkt.mincost, mc, 4 * sizeof(int));
 
                         pkt.destid = 0; tolayer2(pkt);
