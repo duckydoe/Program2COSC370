@@ -36,7 +36,7 @@ struct distance_table {
     int costs[4][4];
 } dt1;
 
-printdt0(dtptr)
+printdt1(dtptr)
      struct distance_table *dtptr;
 {
   printf("             via   \n");
@@ -146,12 +146,11 @@ rtinit1()
 
                         printf("rtupdate1: min-costs changed, broadcasting [%d %d %d %d]\n",
                                 mc[0], mc[1], mc[2], mc[3]);
-                        pkt.sourceid = 0;
+                        pkt.sourceid = 1;
                         memcpy(pkt.mincost, mc, 4 * sizeof(int));
 
-                        pkt.destid = 1; tolayer2(pkt);
+                        pkt.destid = 0; tolayer2(pkt);
                         pkt.destid = 2; tolayer2(pkt);
-                        pkt.destid = 3; tolayer2(pkt);
                     } else {
                         printf("rupdate1: table changed but min-costs same, no broadcast\n");
                     }
@@ -161,7 +160,7 @@ rtinit1()
             }
         }
 
-        linkhandler0(linkid, newcost)
+        linkhandler1(linkid, newcost)
             int linkid, newcost;
 
             {
