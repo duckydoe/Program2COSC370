@@ -146,6 +146,7 @@ init()                         /* initialize the simulator */
    for (i=0; i<1000; i++)
       sum=sum+jimsrand();    /* jimsrand() should be uniform in [0,1] */
    avg = sum/1000.0;
+	//Lei's note: I had to remove this block for my nodes to run
    if (avg < 0.25 || avg > 0.75) {
     printf("It is likely that random number generation on your machine\n" ); 
     printf("is different from what this emulator expects.  Please take\n");
